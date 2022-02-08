@@ -1,0 +1,95 @@
+Avoid PyCharm Overloading
+=========================
+
+This speeds up PyCharm's package index processes and avoids CPU & memory
+overloading.
+
+On my machine (4c/32GB) with 5 conda environments and 10 projects, this reduces
+PyCharm's package scanning from 15 minutes to 45 seconds.
+
+Why?
+----
+
+When PyCharm has multiple conda environments, it will sometimes launch concurrent
+package scanning across those environments. To do so, it uses the `conda` cli,
+and a tool called conda_packaging_tool.py, available from the JetBrains
+intellij-community github repository (see below).
+
+Unfortunately, these tools do not behave well when launched in parallel, as
+they tend to overload CPU & memory in this case.
+
+How?
+----
+
+To avoid stalling these processes, we modify their sources as follows:
+
+1. modify the conda cli
+
+    $ conda activate base
+    $ pip install runfast
+    $ nano `which conda`
+
+    Modify the main section:
+
+     if __name__ == '__main__':
+        from conda.cli import main
+        from runfast import cached
+        cached(main)
+
+2. modify the conda_packaging_tool.py
+
+    if __name__ == '__main__':
+        from runfast import cached
+        cached(main)
+
+How does this work?
+-------------------
+
+Two simple steps:
+
+1. When called in parallel, only one process is allowed to proceed.
+2. `runfast.cached` caches the output of these tools (stdout, stderr) for 1 minute,
+   given the same command line parameters
+
+That is, when PyCharm launches 5 package scanning (`conda list`) commands, only
+one of them will run immediately. If some of the scans are for the same environment,
+only one of them will actually run, while the others simply return the same output.
+
+How to clear the cache or avoid caching at all?
+
+    $ export RUNFAST_NOCACHE=1
+
+Testing
+-------
+
+a) conda packaging tool
+
+    # first time
+    $ time python /opt/pycharm-community-2021.2.1/plugins/python-ce/helpers/conda_packaging_tool.py
+    real    0m13.271s
+    user    0m9.631s
+    sys     0m1.936s
+
+    # second time
+    $ time python /opt/pycharm-community-2021.2.1/plugins/python-ce/helpers/conda_packaging_tool.py
+    real    0m3.159s
+    user    0m0.139s
+    sys     0m1.298s
+
+b) conda cli
+
+   # first time
+   $ time conda list -p /path/to/env
+   real    0m7.985s
+   user    0m7.883s
+   sys     0m0.087s
+
+   # second time
+   real    0m0.152s
+   user    0m0.116s
+   sys     0m0.032s
+
+References
+----------
+* https://github.com/JetBrains/intellij-community/blob/master/python/helpers/conda_packaging_tool.py
+* https://github.com/conda/conda/blob/33a142c16530fcdada6c377486f1c1a385738a96/conda/core/index.py#L53
