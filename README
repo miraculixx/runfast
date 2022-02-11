@@ -34,7 +34,7 @@ To avoid stalling these processes, we modify their sources as follows:
      if __name__ == '__main__':
         from conda.cli import main
         from runfast import cached
-        cached(main)
+        cached(main, on=lambda argv: argv[1] == 'list')
 
 2. modify the conda_packaging_tool.py
 

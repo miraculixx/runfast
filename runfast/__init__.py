@@ -1,4 +1,4 @@
-def cached(main_fn):
+def cached(main_fn, on=None):
     import builtins
     import os
     import sys
@@ -7,6 +7,14 @@ def cached(main_fn):
     from datetime import datetime, timedelta
     from filelock import FileLock
 
+    # check if we should actually run
+    on = on or []
+    if not isinstance(on, (list, tuple)):
+        checks = [on]
+    if not any(chk(sys.argv) for chk in checks):
+        sys.exit(main_fn())
+
+    # ok, we should cache this
     toolname = os.path.basename(sys.argv[0])
     lockfile = f"/tmp/rf_{toolname}.lock"
     cachefile = f'/tmp/rf_{toolname}.cache'
@@ -23,6 +31,7 @@ def cached(main_fn):
         # intercept calling of the exit builtin
         global delayed_exit
         delayed_rc = rc
+
     builtins.exit = exit
 
     @memory.cache
