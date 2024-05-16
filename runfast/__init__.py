@@ -9,6 +9,7 @@ def cached(main_fn, on=None):
 
     # check if we should actually run
     on = on or []
+    checks = []
     if not isinstance(on, (list, tuple)):
         checks = [on]
     if not any(chk(sys.argv) for chk in checks):
