@@ -1,4 +1,4 @@
-def cached(main_fn, on=None):
+def cached(main_fn, on=True):
     import builtins
     import os
     import sys
@@ -8,11 +8,11 @@ def cached(main_fn, on=None):
     from filelock import FileLock
 
     # check if we should actually run
-    on = on or []
-    checks = []
-    if not isinstance(on, (list, tuple)):
-        checks = [on]
-    if not any(chk(sys.argv) for chk in checks):
+    if isinstance(on, (list, tuple)):
+        checks = on
+        if not any(chk in sys.argv for chk in checks):
+            sys.exit(main_fn())
+    elif not on:
         sys.exit(main_fn())
 
     # ok, we should cache this

@@ -34,14 +34,17 @@ To avoid stalling these processes, we modify their sources as follows:
      if __name__ == '__main__':
         from conda.cli import main
         from runfast import cached
-        cached(main, on=lambda argv: argv[1] == 'list' if len(argv) > 1 else False)
+        rc = cached(main, on=['list', 'update'])
 
-2. modify the conda_packaging_tool.py
 
-    # find $HOME -name conda_packaging_tool.py
+2. modify packaging_tool.py and conda_packaging_tool.py
+
+    # find $HOME -name "*_packaging_tool.py"
     if __name__ == '__main__':
         from runfast import cached
         cached(main)
+
+
 
 How does this work?
 -------------------
